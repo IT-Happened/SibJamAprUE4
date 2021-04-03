@@ -4,16 +4,9 @@
 #include "BaseAbility.h"
 
 
-// Sets default values
-ABaseAbility::ABaseAbility()
-{
+ABaseAbility::ABaseAbility() {}
 
-}
-
-// Called when the game starts or when spawned
 void ABaseAbility::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
-

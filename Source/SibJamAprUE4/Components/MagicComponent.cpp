@@ -2,6 +2,7 @@
 
 
 #include "MagicComponent.h"
+#include "GameFramework/Character.h"
 
 UMagicComponent::UMagicComponent()
 {
@@ -46,43 +47,56 @@ TSoftClassPtr<ABaseAbility> UMagicComponent::CheckAbilityCombinations()
 {
 	const int CurrentIndex = ElementsPowers.Num() - 1;
 	TArray<FAbilityCombinations> AbilitiesToRemove = {};
-	
+
 	for (const auto& Ability : AvailableAbilityCombinations)
 	{
-		if(Ability.ElementsGroups.Num() <= CurrentIndex)
+		if (Ability.ElementsGroups.Num() <= CurrentIndex)
 		{
 			UE_LOG(LogTemp, Display, TEXT("Delete by range"));
 			UE_LOG(LogTemp, Display, TEXT("------------------------------------"));
+			UE_LOG(LogTemp, Display, TEXT("------------------------------------"));
 
-			
 			AbilitiesToRemove.Add(Ability);
 			continue;
 		}
-		
+
 		bool bAvailable = false;
 		for (const auto& Element : Ability.ElementsGroups[CurrentIndex].Elements)
 		{
 			UE_LOG(LogTemp, Display, TEXT("Element: %s"), *UEnum::GetValueAsString(Element));
-			if (Element != ME_Fire && Element != ME_Water && Element != ME_Earth && Element != ME_Wind && Element !=
-                ME_Light && Element != ME_Dark)
+			if (CurrentMagicElement == ME_Fire || CurrentMagicElement == ME_Water || CurrentMagicElement == ME_Earth ||
+				CurrentMagicElement == ME_Wind || CurrentMagicElement == ME_Light || CurrentMagicElement == ME_Dark)
 			{
-				TArray<TEnumAsByte<EMagicElement>> BaseElements = {};
-				FindElementReceipt(Element, BaseElements);
-				for(const auto& Element123 : BaseElements)
+				if (Element != ME_Fire && Element != ME_Water && Element != ME_Earth && Element != ME_Wind && Element !=
+					ME_Light && Element != ME_Dark)
 				{
-					UE_LOG(LogTemp, Display, TEXT("  SubElement - %s"), *UEnum::GetValueAsString(Element123));
+					TArray<TEnumAsByte<EMagicElement>> BaseElements = {};
+					FindElementReceipt(Element, BaseElements);
+					for (const auto& Element123 : BaseElements)
+					{
+						UE_LOG(LogTemp, Display, TEXT("  SubElement - %s"), *UEnum::GetValueAsString(Element123));
+					}
+
+					if (BaseElements.Find(CurrentMagicElement) != INDEX_NONE)
+					{
+						UE_LOG(LogTemp, Display, TEXT("Find as part of hard element"));
+						bAvailable = true;
+						break;
+					}
 				}
-				
-				if(BaseElements.Find(CurrentMagicElement) != INDEX_NONE)
+				else
 				{
-					UE_LOG(LogTemp, Display, TEXT("Find as part of hard element"));
-					bAvailable = true;
-					break;
+					if (Element == CurrentMagicElement)
+					{
+						UE_LOG(LogTemp, Display, TEXT("Find as simple element"));
+						bAvailable = true;
+						break;
+					}
 				}
 			}
 			else
 			{
-				if(Element == CurrentMagicElement)
+				if (Element == CurrentMagicElement)
 				{
 					UE_LOG(LogTemp, Display, TEXT("Find as simple element"));
 					bAvailable = true;
@@ -90,27 +104,33 @@ TSoftClassPtr<ABaseAbility> UMagicComponent::CheckAbilityCombinations()
 				}
 			}
 		}
-		
-		if(!bAvailable)
+
+		if (!bAvailable)
 		{
 			UE_LOG(LogTemp, Display, TEXT("Remove"));
 			AbilitiesToRemove.Add(Ability);
 		}
 		else
+		{
+			if ((Ability.ElementsGroups.Num() - 1) == CurrentIndex && (Ability.ElementsGroups[CurrentIndex].Elements.
+				Find(CurrentMagicElement)) != INDEX_NONE)
+				CurrentAbilityClass = Ability.AbilityClass;
+
+			
 			UE_LOG(LogTemp, Display, TEXT("Retain"));
+		}
 
 		UE_LOG(LogTemp, Display, TEXT("------------------------------------"));
 	}
 
-	for(const auto& AbilityToRemove : AbilitiesToRemove)
+	for (const auto& AbilityToRemove : AbilitiesToRemove)
 		AvailableAbilityCombinations.Remove(AbilityToRemove);
 
-	
-	UE_LOG(LogTemp, Display, TEXT("------------------------------------"));
+
 	UE_LOG(LogTemp, Display, TEXT("------------------------------------"));
 	UE_LOG(LogTemp, Display, TEXT("------------------------------------"));
 
-	
+
 	return {};
 }
 
@@ -148,7 +168,7 @@ void UMagicComponent::StartChargeMagic()
 	ElementsPowers.Add(FElementPower(CurrentMagicElement));
 
 	AvailableAbilityCombinations.Empty();
-	
+
 	TArray<FName> Names = AbilitiesDataTable->GetRowNames();
 	for (auto& Name : Names)
 	{
@@ -162,7 +182,6 @@ void UMagicComponent::StartChargeMagic()
 	}
 
 	CheckAbilityCombinations();
-
 
 	GetWorld()->GetTimerManager().SetTimer(ChargingTimer, this, &UMagicComponent::Charging, 0.1, true);
 }
@@ -184,6 +203,21 @@ void UMagicComponent::ReleaseMagic()
 	if (!bCharging) return;
 	bCharging = false;
 
+	if(CurrentAbilityClass)
+	{
+		FActorSpawnParameters SpawnParameters;
+		SpawnParameters.Owner = Cast<APawn>(GetOwner());
+
+		const FVector ForwardVector = GetOwner()->GetActorForwardVector() * MagicOffset;
+		ABaseAbility* Ability = GetWorld()->SpawnActor<ABaseAbility>(CurrentAbilityClass.LoadSynchronous(),
+		                                                             FTransform(GetOwner()->GetActorRotation(),
+		                                                             	Cast<ACharacter>(GetOwner())->GetMesh()->
+		                                                                GetSocketLocation(MagicSocketName) + ForwardVector),
+		                                                             SpawnParameters);
+		
+		if(Ability)
+			Ability->BP_UseAbility(ElementsPowers);
+	}
 
 	GetWorld()->GetTimerManager().ClearTimer(ChargingTimer);
 }
@@ -215,5 +249,6 @@ void UMagicComponent::ChangeMagicElement(const TEnumAsByte<EMagicElement> NewMag
 	{
 		CurrentAbilityClass = nullptr;
 		ReleaseMagic();
+		//TODO: Add animation on bad cast
 	}
 }

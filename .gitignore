@@ -2,6 +2,8 @@
 .vs/
 .idea/
 
+
+
 # Compiled Object files
 *.slo
 *.lo
@@ -73,3 +75,6 @@ Plugins/*/Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+
+Content/
+!Content/Game/

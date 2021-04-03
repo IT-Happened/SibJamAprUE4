@@ -5,27 +5,9 @@
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
 #include "SibJamAprUE4/Magic/BaseAbility.h"
+#include "SibJamAprUE4/Structures/Element.h"
 
 #include "MagicComponent.generated.h"
-
-
-UENUM(BlueprintType, Blueprintable)
-enum EMagicElement
-{
-	ME_Any UMETA(DisplayName = "Any"),
-	ME_Fire UMETA(DisplayName = "Fire"),
-	ME_Water UMETA(DisplayName = "Water"),
-	ME_Earth UMETA(DisplayName = "Earth"),
-	ME_Wind UMETA(DisplayName = "Wind"),
-	ME_Light UMETA(DisplayName = "Light"),
-	ME_Dark UMETA(DisplayName = "Dark"),
-	ME_Nature UMETA(DisplayName = "Nature"),
-	ME_Lightning UMETA(DisplayName = "Lightning"),
-	ME_Ice UMETA(DisplayName = "Ice"),
-	ME_Void UMETA(DisplayName = "Void"),
-
-	ME_MAX
-};
 
 
 USTRUCT(BlueprintType)
@@ -86,25 +68,6 @@ public:
 	}
 };
 
-USTRUCT(BlueprintType)
-struct FElementPower
-{
-	GENERATED_BODY()
-
-	FElementPower() {}
-	explicit FElementPower(const TEnumAsByte<EMagicElement> SetElement, const float SetPower = 0.f)
-	{
-		Element = SetElement;
-		Power = SetPower;
-	}
-
-public:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	TEnumAsByte<EMagicElement> Element = ME_Fire;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	float Power = 0.f;
-};
-
 UCLASS(Blueprintable, BlueprintType)
 class SIBJAMAPRUE4_API UMagicComponent : public UActorComponent
 {
@@ -132,7 +95,11 @@ protected:
 	float GetChargeMultiplication() const {return ChargeMultiplication;}
 	
 private:
-	
+
+	UPROPERTY(EditDefaultsOnly)
+	FName MagicSocketName = "None";
+	UPROPERTY(EditDefaultsOnly)
+	float MagicOffset = 25.f;
 	
 	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	bool bCharging = false;

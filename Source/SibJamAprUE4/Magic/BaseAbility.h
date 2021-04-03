@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "SibJamAprUE4/Structures/Element.h"
+
 #include "BaseAbility.generated.h"
 
 UCLASS(Abstract, Blueprintable, BlueprintType)
@@ -13,8 +15,13 @@ class SIBJAMAPRUE4_API ABaseAbility : public AActor
 
 public:
 	ABaseAbility();
-
+	
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Ability", meta = (DisplayName = "UseAbility"))
+	void BP_UseAbility(const TArray<FElementPower>& Elements);
+	
 protected:
 	virtual void BeginPlay() override;
 
+private:
+	
 };
