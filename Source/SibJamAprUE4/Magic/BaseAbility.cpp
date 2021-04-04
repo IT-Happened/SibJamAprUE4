@@ -38,6 +38,8 @@ void ABaseAbility::WaitAbility()
 void ABaseAbility::EndAbility()
 {	
 	ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner());
+
+	if(!OwnerCharacter) return;
 	
 	OwnerCharacter->StopAnimMontage();
 	
