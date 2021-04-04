@@ -115,6 +115,9 @@ private:
 	TArray<FAbilityCombinations> AvailableAbilityCombinations = {};
 	
 	void Charging();
+
+	UPROPERTY()
+	bool bUseAbility;
 	
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Elements", meta = (AllowPrivateAccess = "true"))
@@ -127,6 +130,8 @@ private:
 	float GetFullElementsPower();
 	
 	FTimerHandle ChargingTimer;
+
+	TEnumAsByte<EMagicElement> LastBaseMagicElement = ME_Fire;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Data")
 	UDataTable* ElementsDataTable = nullptr;
@@ -134,4 +139,12 @@ private:
 	UDataTable* AbilitiesDataTable = nullptr;
 
 	void FindElementReceipt(TEnumAsByte<EMagicElement> Element, TArray<TEnumAsByte<EMagicElement>>& Elements) const;
+
+	UFUNCTION()
+	void OnEndAbility();
+
+	UPROPERTY(EditDefaultsOnly, Category = "Bad Cast")
+	float BadCastRecoverTime = 0.2f;
+	UPROPERTY(EditDefaultsOnly, Category = "Bad Cast")
+	UAnimMontage* BadCastMontage = nullptr;
 };

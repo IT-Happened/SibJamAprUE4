@@ -3,6 +3,7 @@
 
 #include "MagicComponent.h"
 #include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 UMagicComponent::UMagicComponent()
 {
@@ -116,7 +117,7 @@ TSoftClassPtr<ABaseAbility> UMagicComponent::CheckAbilityCombinations()
 				Find(CurrentMagicElement)) != INDEX_NONE)
 				CurrentAbilityClass = Ability.AbilityClass;
 
-			
+
 			UE_LOG(LogTemp, Display, TEXT("Retain"));
 		}
 
@@ -157,10 +158,18 @@ void UMagicComponent::FindElementReceipt(const TEnumAsByte<EMagicElement> Elemen
 	}
 }
 
+void UMagicComponent::OnEndAbility()
+{
+	bUseAbility = false;
+
+	
+	Cast<ACharacter>(GetOwner())->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+}
+
 
 void UMagicComponent::StartChargeMagic()
 {
-	if (bCharging) return;
+	if (bCharging || bUseAbility) return;
 	bCharging = true;
 
 
@@ -200,10 +209,10 @@ void UMagicComponent::Charging()
 
 void UMagicComponent::ReleaseMagic()
 {
-	if (!bCharging) return;
+	if (!bCharging || bUseAbility) return;
 	bCharging = false;
 
-	if(CurrentAbilityClass)
+	if (CurrentAbilityClass && GetFullElementsPower() > 30.f)
 	{
 		FActorSpawnParameters SpawnParameters;
 		SpawnParameters.Owner = Cast<APawn>(GetOwner());
@@ -211,12 +220,26 @@ void UMagicComponent::ReleaseMagic()
 		const FVector ForwardVector = GetOwner()->GetActorForwardVector() * MagicOffset;
 		ABaseAbility* Ability = GetWorld()->SpawnActor<ABaseAbility>(CurrentAbilityClass.LoadSynchronous(),
 		                                                             FTransform(GetOwner()->GetActorRotation(),
-		                                                             	Cast<ACharacter>(GetOwner())->GetMesh()->
-		                                                                GetSocketLocation(MagicSocketName) + ForwardVector),
+			                                                             Cast<ACharacter>(GetOwner())->GetMesh()->
+			                                                             GetSocketLocation(MagicSocketName) +
+			                                                             ForwardVector),
 		                                                             SpawnParameters);
-		
-		if(Ability)
-			Ability->BP_UseAbility(ElementsPowers);
+
+		if (Ability)
+		{
+			Ability->UseAbility(ElementsPowers);
+			bUseAbility = true;
+			Ability->EndAbilityDelegate.AddDynamic(this, &UMagicComponent::OnEndAbility);
+		}
+	}
+
+	ElementsPowers.Empty();
+
+	if (CurrentMagicElement != ME_Fire && CurrentMagicElement != ME_Water && CurrentMagicElement != ME_Earth &&
+		CurrentMagicElement != ME_Wind && CurrentMagicElement !=
+		ME_Light && CurrentMagicElement != ME_Dark)
+	{
+		CurrentMagicElement = LastBaseMagicElement;
 	}
 
 	GetWorld()->GetTimerManager().ClearTimer(ChargingTimer);
@@ -237,6 +260,8 @@ void UMagicComponent::ChangeMagicElement(const TEnumAsByte<EMagicElement> NewMag
 
 	if (CombineElement != ME_Any)
 	{
+		LastBaseMagicElement = NewMagicElement;
+
 		CurrentMagicElement = CombineElement;
 		ElementsPowers.Last().Element = CombineElement;
 	}
@@ -248,7 +273,20 @@ void UMagicComponent::ChangeMagicElement(const TEnumAsByte<EMagicElement> NewMag
 	if (AvailableAbilityCombinations.Num() <= 0)
 	{
 		CurrentAbilityClass = nullptr;
+
 		ReleaseMagic();
-		//TODO: Add animation on bad cast
+
+		bUseAbility = true;
+
+		ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner());
+		
+		const float PlayRate = BadCastMontage->GetPlayLength() / BadCastRecoverTime;
+		OwnerCharacter->PlayAnimMontage(BadCastMontage, PlayRate);
+
+		OwnerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_None);
+
+		FTimerHandle RecoverTimer;
+		GetWorld()->GetTimerManager().SetTimer(RecoverTimer, this, &UMagicComponent::OnEndAbility,
+		                                       BadCastRecoverTime, false);
 	}
 }
